@@ -136,17 +136,113 @@
     </div>
     
     <script>
-        // --- Simulasi Data Pengguna ---
-        const userDatabase = [
-            { id: 'user-001', customName: 'Pengguna', desc: 'Deskripsi singkat tentang dirimu.', is_admin: false, profilePicUrl: 'https://via.placeholder.com/150' },
-        ];
-        
-        let currentUser = userDatabase[0];
+        // --- KONFIGURASI PENTING ---
+        // GANTI INI DENGAN USERNAME GITHUB ANDA
+        const GITHUB_USERNAME = 'imwiyata'; 
+        // GANTI INI DENGAN NAMA REPOSITORI ANDA (misalnya, Axhozplles.github.io)
+        const REPO_NAME = 'Axhozplles.github.io'; 
 
-        // --- Simulasi Data Postingan ---
-        const postsData = [
-            { postId: 'p1', authorId: 'user-001', authorName: 'Pengguna', title: 'Postingan Pertama', content: 'Halo dunia! ini postingan pertamaku.', timestamp: new Date() }
-        ];
+        const GITHUB_TOKEN = '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'; 
+
+        // --- Data & State Awal ---
+        const DATA_FILE_PATH = 'data.json';
+        let currentUser;
+        let postsData = [];
+        let dataSha = null;
+
+        // --- GitHub API Functions ---
+        async function fetchGitHubData() {
+            try {
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
+                    headers: {
+                        'Accept': 'application/vnd.github.v3.raw'
+                    }
+                });
+                
+                if (response.status === 404) {
+                    console.log("File data.json tidak ditemukan, membuat data baru.");
+                    return {
+                        users: [{ id: 'user-001', customName: 'Pengguna', desc: 'Deskripsi singkat tentang dirimu.', is_admin: false, profilePicUrl: 'https://via.placeholder.com/150' }],
+                        posts: []
+                    };
+                }
+                
+                // Ambil SHA untuk update berikutnya
+                const rawResponse = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${DATA_FILE_PATH}`);
+                const rawData = await rawResponse.json();
+                dataSha = rawData.sha;
+
+                const data = await response.json();
+                console.log("Data berhasil dimuat dari GitHub.");
+                return data;
+
+            } catch (error) {
+                console.error("Gagal memuat data dari GitHub:", error);
+                return {
+                    users: [{ id: 'user-001', customName: 'Pengguna', desc: 'Deskripsi singkat tentang dirimu.', is_admin: false, profilePicUrl: 'https://via.placeholder.com/150' }],
+                    posts: []
+                };
+            }
+        }
+        
+        async function saveGitHubData(data) {
+            const content = JSON.stringify(data, null, 2);
+            const encodedContent = btoa(unescape(encodeURIComponent(content)));
+            
+            const commitMessage = 'Update data';
+            const body = {
+                message: commitMessage,
+                content: encodedContent
+            };
+            
+            if (dataSha) {
+                body.sha = dataSha;
+            }
+
+            try {
+                const response = await fetch(`https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/${DATA_FILE_PATH}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    dataSha = result.content.sha;
+                    console.log("Data berhasil disimpan ke GitHub!");
+                    return true;
+                } else {
+                    console.error("Gagal menyimpan data:", response.status, response.statusText);
+                    return false;
+                }
+            } catch (error) {
+                console.error("Kesalahan jaringan saat menyimpan data:", error);
+                return false;
+            }
+        }
+
+        async function initApp() {
+            const data = await fetchGitHubData();
+            window.userDatabase = data.users;
+            postsData = data.posts;
+            
+            // Mencari pengguna dengan ID "user-001"
+            let user = window.userDatabase.find(u => u.id === 'user-001');
+            if (!user) {
+                // Jika user "user-001" tidak ada, buat baru
+                user = { id: 'user-001', customName: 'Pengguna', desc: 'Deskripsi singkat tentang dirimu.', is_admin: false, profilePicUrl: 'https://via.placeholder.com/150' };
+                window.userDatabase.push(user);
+                await saveGitHubData({ users: window.userDatabase, posts: postsData });
+            }
+            currentUser = user;
+            
+            updateProfileDisplay();
+            showAllPosts();
+            showPage('beranda'); // Pastikan halaman beranda aktif saat pertama kali dibuka
+        }
 
         // --- Navigasi & Tampilan Umum ---
         const sidebarMenu = document.getElementById('sidebar-menu');
@@ -182,7 +278,8 @@
 
         function showAllPosts() {
             allPostsContainer.innerHTML = '';
-            postsData.forEach(post => {
+            const sortedPosts = [...postsData].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            sortedPosts.forEach(post => {
                 const postCard = createPostCard(post);
                 allPostsContainer.appendChild(postCard);
             });
@@ -194,7 +291,8 @@
             if (myPosts.length === 0) {
                  myPostsContainer.innerHTML = '<p class="not-found-message" style="display:block;">Kamu belum membuat postingan.</p>';
             } else {
-                myPosts.forEach(post => {
+                const sortedMyPosts = [...myPosts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                sortedMyPosts.forEach(post => {
                     const postCard = createPostCard(post);
                     myPostsContainer.appendChild(postCard);
                 });
@@ -313,12 +411,13 @@
                 const deleteBtn = document.createElement('button');
                 deleteBtn.classList.add('delete-post-btn');
                 deleteBtn.textContent = 'Hapus';
-                deleteBtn.addEventListener('click', () => {
+                deleteBtn.addEventListener('click', async () => {
                     if (confirm("Apakah kamu yakin ingin menghapus postingan ini?")) {
                         const postIndex = postsData.findIndex(p => p.postId === postData.postId);
                         if (postIndex > -1) {
                             postsData.splice(postIndex, 1);
                         }
+                        await saveGitHubData({ users: window.userDatabase, posts: postsData });
                         showAllPosts();
                         showMyPosts();
                     }
@@ -330,14 +429,12 @@
             
             return newPost;
         }
-        
-        document.addEventListener('DOMContentLoaded', showAllPosts);
 
         postContentInput.addEventListener('input', () => {
             charCount.textContent = postContentInput.value.length;
         });
 
-        postButton.addEventListener('click', () => {
+        postButton.addEventListener('click', async () => {
             const title = postTitleInput.value.trim() || "Postingan Tanpa Judul";
             const content = postContentInput.value.trim();
 
@@ -347,15 +444,16 @@
             }
 
             const newPostData = {
-                postId: `p${postsData.length + 1}`,
+                postId: `p${Date.now()}`,
                 authorId: currentUser.id,
                 authorName: currentUser.customName || `ID #${currentUser.id.split('-')[1]}`,
                 title: title,
                 content: content,
-                timestamp: new Date()
+                timestamp: new Date().toISOString()
             };
             
             postsData.unshift(newPostData);
+            await saveGitHubData({ users: window.userDatabase, posts: postsData });
 
             postTitleInput.value = '';
             postContentInput.value = '';
@@ -369,7 +467,7 @@
             postModal.style.display = 'none';
         });
 
-        // --- Fitur Edit Profil & Unik Username ---
+        // --- Fitur Edit Profil ---
         const profilePic = document.getElementById('profile-pic');
         const profileName = document.getElementById('profile-name');
         const profileDesc = document.getElementById('profile-desc');
@@ -387,31 +485,30 @@
             profilePic.src = currentUser.profilePicUrl;
         }
         
-        document.addEventListener('DOMContentLoaded', updateProfileDisplay);
-
         function openEditModal() {
             editNameInput.value = currentUser.customName;
             editDescInput.value = currentUser.desc;
             editProfileModal.style.display = 'flex';
         }
 
-        editProfilePicInput.addEventListener('change', (event) => {
+        editProfilePicInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
+                reader.onload = async (e) => {
                     currentUser.profilePicUrl = e.target.result;
                     updateProfileDisplay();
+                    await saveGitHubData({ users: window.userDatabase, posts: postsData });
                 };
                 reader.readAsDataURL(file);
             }
         });
 
-        saveChangesBtn.addEventListener('click', () => {
+        saveChangesBtn.addEventListener('click', async () => {
             const newName = editNameInput.value.trim();
             const newDesc = editDescInput.value.trim();
             
-            const isNameTaken = userDatabase.some(user => user.customName.toLowerCase() === newName.toLowerCase() && user.id !== currentUser.id && newName !== '');
+            const isNameTaken = window.userDatabase.some(user => user.customName.toLowerCase() === newName.toLowerCase() && user.id !== currentUser.id && newName !== '');
 
             if (isNameTaken) {
                 alert("Nama ini sudah digunakan. Silakan pilih nama lain.");
@@ -429,6 +526,8 @@
                     post.authorName = currentUser.customName || `ID #${currentUser.id.split('-')[1]}`;
                 }
             });
+            
+            await saveGitHubData({ users: window.userDatabase, posts: postsData });
             showAllPosts();
             showMyPosts();
         });
@@ -437,7 +536,7 @@
             editProfileModal.style.display = 'none';
         });
 
-        deleteProfileBtn.addEventListener('click', () => {
+        deleteProfileBtn.addEventListener('click', async () => {
             alert("Tidak bisa menghapus profil pengguna utama.");
         });
 
@@ -457,12 +556,13 @@
             }
         }
         
-        savePostBtn.addEventListener('click', () => {
+        savePostBtn.addEventListener('click', async () => {
             if (postToEdit) {
                 postToEdit.title = editPostTitleInput.value.trim() || "Postingan Tanpa Judul";
                 postToEdit.content = editPostContentInput.value.trim();
-                postToEdit.timestamp = new Date();
+                postToEdit.timestamp = new Date().toISOString();
                 
+                await saveGitHubData({ users: window.userDatabase, posts: postsData });
                 editPostModal.style.display = 'none';
                 showAllPosts();
                 showMyPosts();
@@ -501,7 +601,7 @@
         }
 
         function viewProfile(userId) {
-            const user = userDatabase.find(u => u.id === userId);
+            const user = window.userDatabase.find(u => u.id === userId);
             if (!user) return;
             
             publicProfilePic.src = user.profilePicUrl;
@@ -513,7 +613,8 @@
             if (userPosts.length === 0) {
                 publicProfilePostsContainer.innerHTML = '<p class="not-found-message" style="display:block;">Pengguna ini belum membuat postingan.</p>';
             } else {
-                userPosts.forEach(post => {
+                const sortedUserPosts = [...userPosts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                sortedUserPosts.forEach(post => {
                     const postCard = createPostCard(post);
                     publicProfilePostsContainer.appendChild(postCard);
                 });
@@ -533,7 +634,7 @@
             let hasUserResults = false;
 
             if (query.length > 0) {
-                userDatabase.forEach(user => {
+                window.userDatabase.forEach(user => {
                     const userName = (user.customName || `id #${user.id.split('-')[1]}`).toLowerCase();
                     if (userName.includes(query)) {
                         const userCard = createProfileCard(user);
@@ -562,6 +663,8 @@
                 noResultsMessage.style.display = 'none';
             }
         });
+        
+        initApp();
     </script>
 </body>
 </html>
