@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axhozplles - Ruang Curhatmu</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="menu-icon" onclick="toggleMenu()">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+        <div class="header-center">
+            <div class="logo">
+                <h1>Axhozplles</h1>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Cari postingan atau pengguna...">
+            </div>
+        </div>
+        <nav id="sidebar-menu">
+            <ul>
+                <li><a href="#beranda">Beranda</a></li>
+                <li><a href="#postingan">Postingan</a></li>
+                <li><a href="#profil">Profil</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="beranda" class="page-section active">
+            <h2>Semua Postingan</h2>
+            <div id="no-results-message" class="not-found-message">
+                Yang anda cari tidak ada disini.
+            </div>
+            <div id="user-search-results">
+                </div>
+            <div id="all-posts-container">
+                </div>
+        </section>
+
+        <section id="postingan" class="page-section">
+            <h2>Postingan Saya</h2>
+            <button class="create-post-btn" onclick="openPostModal()">Buat Postingan Baru</button>
+            <div id="my-posts-container">
+                </div>
+        </section>
+
+        <section id="profil" class="page-section">
+            <h2>Profil Saya</h2>
+            <div class="profile-container">
+                <img src="https://via.placeholder.com/150" alt="Foto Profil" class="profile-pic" id="profile-pic">
+                <div class="profile-info">
+                    <h3 id="profile-name">ID #1</h3>
+                    <p id="profile-desc">Deskripsi singkat tentang dirimu.</p>
+                </div>
+            </div>
+            <button class="edit-profile-button" onclick="openEditModal()">Edit Profil</button>
+        </section>
+
+        <section id="public-profile-page" class="page-section">
+            <button class="back-btn" onclick="showHomePage()">Kembali ke Beranda</button>
+            <div class="public-profile-columns">
+                <div class="public-profile-info-column">
+                    <img src="" alt="Foto Profil" class="profile-pic" id="public-profile-pic">
+                    <h3 id="public-profile-name"></h3>
+                    <p id="public-profile-desc"></p>
+                </div>
+                <div class="public-profile-posts-column">
+                    <h4 class="user-posts-heading">Postingan</h4>
+                    <div id="public-posts-container">
+                        </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Profil</h3>
+            <label for="edit-profile-pic">Ganti Foto Profil:</label>
+            <input type="file" id="edit-profile-pic" accept="image/*">
+            
+            <label for="edit-name">Nama Pengguna Kustom:</label>
+            <input type="text" id="edit-name" placeholder="Masukkan nama yang kamu inginkan">
+            
+            <label for="edit-desc">Deskripsi:</label>
+            <textarea id="edit-desc" rows="4"></textarea>
+
+            <div class="modal-buttons">
+                <button id="save-changes-btn">Simpan Perubahan</button>
+                <button id="cancel-edit-btn">Batal</button>
+                <button id="delete-profile-btn" class="delete-btn">Hapus Profil</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-post-modal" class="modal">
+        <div class="modal-content">
+            <h3>Buat Postingan Baru</h3>
+            <label for="post-title-input">Judul Postingan:</label>
+            <input type="text" id="post-title-input" placeholder="Tulis judul yang menarik...">
+
+            <label for="post-content-input">Isi Postingan (maks. 2000 karakter):</label>
+            <textarea id="post-content-input" placeholder="Apa yang sedang kamu rasakan saat ini?" maxlength="2000"></textarea>
+            
+            <div class="char-count">
+                <span id="char-count">0</span>/2000
+            </div>
+
+            <div class="modal-buttons">
+                <button id="post-button">Posting</button>
+                <button id="cancel-post-btn">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-post-modal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Postingan</h3>
+            <label for="edit-post-title-input">Judul Postingan:</label>
+            <input type="text" id="edit-post-title-input">
+
+            <label for="edit-post-content-input">Isi Postingan:</label>
+            <textarea id="edit-post-content-input"></textarea>
+
+            <div class="modal-buttons">
+                <button id="save-post-btn">Simpan</button>
+                <button id="cancel-edit-post-btn">Batal</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- Simulasi Data Pengguna ---
+        const userDatabase = [
+            { id: 'user-001', customName: 'Pengguna', desc: 'Deskripsi singkat tentang dirimu.', is_admin: false, profilePicUrl: 'https://via.placeholder.com/150' },
+        ];
+        
+        let currentUser = userDatabase[0];
+
+        // --- Simulasi Data Postingan ---
+        const postsData = [
+            { postId: 'p1', authorId: 'user-001', authorName: 'Pengguna', title: 'Postingan Pertama', content: 'Halo dunia! ini postingan pertamaku.', timestamp: new Date() }
+        ];
+
+        // --- Navigasi & Tampilan Umum ---
+        const sidebarMenu = document.getElementById('sidebar-menu');
+        const menuIcon = document.querySelector('.menu-icon');
+        const sections = document.querySelectorAll('.page-section');
+        const allPostsContainer = document.getElementById('all-posts-container');
+        const myPostsContainer = document.getElementById('my-posts-container');
+        const noResultsMessage = document.getElementById('no-results-message');
+        const searchInput = document.getElementById('search-input');
+        const POST_PREVIEW_LENGTH = 250;
+        let postToEdit = null;
+
+        function toggleMenu() {
+            sidebarMenu.classList.toggle('open');
+            menuIcon.classList.toggle('open');
+        }
+
+        function showPage(pageId) {
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            if (pageId === 'beranda') {
+                showAllPosts();
+            } else if (pageId === 'postingan') {
+                showMyPosts();
+            }
+        }
+        
+        function showHomePage() {
+            showPage('beranda');
+        }
+
+        function showAllPosts() {
+            allPostsContainer.innerHTML = '';
+            postsData.forEach(post => {
+                const postCard = createPostCard(post);
+                allPostsContainer.appendChild(postCard);
+            });
+        }
+
+        function showMyPosts() {
+            myPostsContainer.innerHTML = '';
+            const myPosts = postsData.filter(post => post.authorId === currentUser.id);
+            if (myPosts.length === 0) {
+                 myPostsContainer.innerHTML = '<p class="not-found-message" style="display:block;">Kamu belum membuat postingan.</p>';
+            } else {
+                myPosts.forEach(post => {
+                    const postCard = createPostCard(post);
+                    myPostsContainer.appendChild(postCard);
+                });
+            }
+        }
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                showPage(this.getAttribute('href').substring(1));
+                toggleMenu();
+            });
+        });
+
+        // --- Fitur Posting & Hapus ---
+        const postModal = document.getElementById('new-post-modal');
+        const postTitleInput = document.getElementById('post-title-input');
+        const postContentInput = document.getElementById('post-content-input');
+        const postButton = document.getElementById('post-button');
+        const cancelPostBtn = document.getElementById('cancel-post-btn');
+        const charCount = document.getElementById('char-count');
+
+        function openPostModal() {
+            postModal.style.display = 'flex';
+        }
+
+        function createPostCard(postData) {
+            const newPost = document.createElement('div');
+            newPost.classList.add('post-card');
+            newPost.dataset.authorId = postData.authorId;
+            newPost.dataset.authorName = postData.authorName;
+            newPost.dataset.title = postData.title;
+            newPost.dataset.content = postData.content;
+
+            const newTitle = document.createElement('h3');
+            newTitle.textContent = postData.title;
+
+            const newContent = document.createElement('p');
+            
+            if (postData.content.length > POST_PREVIEW_LENGTH) {
+                const truncatedContent = postData.content.substring(0, POST_PREVIEW_LENGTH) + '...';
+                newContent.textContent = truncatedContent;
+                
+                const toggleBtn = document.createElement('a');
+                toggleBtn.href = '#';
+                toggleBtn.classList.add('toggle-content-btn');
+                toggleBtn.textContent = 'baca selengkapnya';
+                
+                let isExpanded = false;
+
+                toggleBtn.onclick = (e) => {
+                    e.preventDefault();
+                    isExpanded = !isExpanded;
+                    if (isExpanded) {
+                        newContent.textContent = postData.content;
+                        toggleBtn.textContent = 'tutup tampilan';
+                    } else {
+                        newContent.textContent = truncatedContent;
+                        toggleBtn.textContent = 'baca selengkapnya';
+                    }
+                };
+                newPost.appendChild(newTitle);
+                newPost.appendChild(newContent);
+                newPost.appendChild(toggleBtn);
+            } else {
+                newContent.textContent = postData.content;
+                newPost.appendChild(newTitle);
+                newPost.appendChild(newContent);
+            }
+
+            const bottomBar = document.createElement('div');
+            bottomBar.classList.add('post-bottom-bar');
+
+            const newAuthor = document.createElement('span');
+            newAuthor.classList.add('author');
+            newAuthor.textContent = `oleh `;
+            const authorLink = document.createElement('a');
+            authorLink.href = '#';
+            authorLink.textContent = postData.authorName;
+            authorLink.onclick = (e) => {
+                e.preventDefault();
+                viewProfile(postData.authorId);
+            };
+            newAuthor.appendChild(authorLink);
+            bottomBar.appendChild(newAuthor);
+
+            const timestamp = document.createElement('span');
+            timestamp.classList.add('timestamp');
+            const date = postData.timestamp ? new Date(postData.timestamp) : new Date();
+            const formattedDate = date.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const formattedTime = date.toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            timestamp.textContent = `${formattedDate} | ${formattedTime}`;
+            bottomBar.appendChild(timestamp);
+
+            newPost.appendChild(bottomBar);
+
+            if (currentUser.id === postData.authorId) {
+                const controlsContainer = document.createElement('div');
+                controlsContainer.classList.add('post-controls');
+
+                const editBtn = document.createElement('button');
+                editBtn.classList.add('edit-post-btn');
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    openEditPostModal(postData.postId);
+                });
+                controlsContainer.appendChild(editBtn);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('delete-post-btn');
+                deleteBtn.textContent = 'Hapus';
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm("Apakah kamu yakin ingin menghapus postingan ini?")) {
+                        const postIndex = postsData.findIndex(p => p.postId === postData.postId);
+                        if (postIndex > -1) {
+                            postsData.splice(postIndex, 1);
+                        }
+                        showAllPosts();
+                        showMyPosts();
+                    }
+                });
+                controlsContainer.appendChild(deleteBtn);
+                
+                newPost.appendChild(controlsContainer);
+            }
+            
+            return newPost;
+        }
+        
+        document.addEventListener('DOMContentLoaded', showAllPosts);
+
+        postContentInput.addEventListener('input', () => {
+            charCount.textContent = postContentInput.value.length;
+        });
+
+        postButton.addEventListener('click', () => {
+            const title = postTitleInput.value.trim() || "Postingan Tanpa Judul";
+            const content = postContentInput.value.trim();
+
+            if (content.length === 0) {
+                alert("Isi postingan tidak boleh kosong!");
+                return;
+            }
+
+            const newPostData = {
+                postId: `p${postsData.length + 1}`,
+                authorId: currentUser.id,
+                authorName: currentUser.customName || `ID #${currentUser.id.split('-')[1]}`,
+                title: title,
+                content: content,
+                timestamp: new Date()
+            };
+            
+            postsData.unshift(newPostData);
+
+            postTitleInput.value = '';
+            postContentInput.value = '';
+            charCount.textContent = '0';
+            postModal.style.display = 'none';
+            showMyPosts();
+            showAllPosts();
+        });
+
+        cancelPostBtn.addEventListener('click', () => {
+            postModal.style.display = 'none';
+        });
+
+        // --- Fitur Edit Profil & Unik Username ---
+        const profilePic = document.getElementById('profile-pic');
+        const profileName = document.getElementById('profile-name');
+        const profileDesc = document.getElementById('profile-desc');
+        const editProfileModal = document.getElementById('edit-profile-modal');
+        const editProfilePicInput = document.getElementById('edit-profile-pic');
+        const editNameInput = document.getElementById('edit-name');
+        const editDescInput = document.getElementById('edit-desc');
+        const saveChangesBtn = document.getElementById('save-changes-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const deleteProfileBtn = document.getElementById('delete-profile-btn');
+
+        function updateProfileDisplay() {
+            profileName.textContent = currentUser.customName || `ID #${currentUser.id.split('-')[1]}`;
+            profileDesc.textContent = currentUser.desc;
+            profilePic.src = currentUser.profilePicUrl;
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateProfileDisplay);
+
+        function openEditModal() {
+            editNameInput.value = currentUser.customName;
+            editDescInput.value = currentUser.desc;
+            editProfileModal.style.display = 'flex';
+        }
+
+        editProfilePicInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentUser.profilePicUrl = e.target.result;
+                    updateProfileDisplay();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        saveChangesBtn.addEventListener('click', () => {
+            const newName = editNameInput.value.trim();
+            const newDesc = editDescInput.value.trim();
+            
+            const isNameTaken = userDatabase.some(user => user.customName.toLowerCase() === newName.toLowerCase() && user.id !== currentUser.id && newName !== '');
+
+            if (isNameTaken) {
+                alert("Nama ini sudah digunakan. Silakan pilih nama lain.");
+                return;
+            }
+
+            currentUser.customName = newName;
+            currentUser.desc = newDesc || currentUser.desc;
+            
+            updateProfileDisplay();
+            editProfileModal.style.display = 'none';
+
+            postsData.forEach(post => {
+                if (post.authorId === currentUser.id) {
+                    post.authorName = currentUser.customName || `ID #${currentUser.id.split('-')[1]}`;
+                }
+            });
+            showAllPosts();
+            showMyPosts();
+        });
+
+        cancelEditBtn.addEventListener('click', () => {
+            editProfileModal.style.display = 'none';
+        });
+
+        deleteProfileBtn.addEventListener('click', () => {
+            alert("Tidak bisa menghapus profil pengguna utama.");
+        });
+
+        // --- Fitur Edit Postingan ---
+        const editPostModal = document.getElementById('edit-post-modal');
+        const editPostTitleInput = document.getElementById('edit-post-title-input');
+        const editPostContentInput = document.getElementById('edit-post-content-input');
+        const savePostBtn = document.getElementById('save-post-btn');
+        const cancelEditPostBtn = document.getElementById('cancel-edit-post-btn');
+        
+        function openEditPostModal(postId) {
+            postToEdit = postsData.find(post => post.postId === postId);
+            if (postToEdit) {
+                editPostTitleInput.value = postToEdit.title;
+                editPostContentInput.value = postToEdit.content;
+                editPostModal.style.display = 'flex';
+            }
+        }
+        
+        savePostBtn.addEventListener('click', () => {
+            if (postToEdit) {
+                postToEdit.title = editPostTitleInput.value.trim() || "Postingan Tanpa Judul";
+                postToEdit.content = editPostContentInput.value.trim();
+                postToEdit.timestamp = new Date();
+                
+                editPostModal.style.display = 'none';
+                showAllPosts();
+                showMyPosts();
+            }
+        });
+        
+        cancelEditPostBtn.addEventListener('click', () => {
+            editPostModal.style.display = 'none';
+            postToEdit = null;
+        });
+
+        // --- Fitur Pencarian & Profil Publik ---
+        const userSearchResults = document.getElementById('user-search-results');
+        const publicProfilePage = document.getElementById('public-profile-page');
+        const publicProfilePic = document.getElementById('public-profile-pic');
+        const publicProfileName = document.getElementById('public-profile-name');
+        const publicProfileDesc = document.getElementById('public-profile-desc');
+        const publicProfilePostsContainer = document.getElementById('public-posts-container');
+        
+        function createProfileCard(userData) {
+            const card = document.createElement('div');
+            card.classList.add('user-profile-card');
+            card.dataset.userId = userData.id;
+            card.onclick = () => viewProfile(userData.id);
+
+            const img = document.createElement('img');
+            img.src = userData.profilePicUrl;
+            img.alt = 'Foto Profil';
+            card.appendChild(img);
+
+            const name = document.createElement('h4');
+            name.textContent = userData.customName || `ID #${userData.id.split('-')[1]}`;
+            card.appendChild(name);
+            
+            return card;
+        }
+
+        function viewProfile(userId) {
+            const user = userDatabase.find(u => u.id === userId);
+            if (!user) return;
+            
+            publicProfilePic.src = user.profilePicUrl;
+            publicProfileName.textContent = user.customName || `ID #${user.id.split('-')[1]}`;
+            publicProfileDesc.textContent = user.desc;
+
+            publicProfilePostsContainer.innerHTML = '';
+            const userPosts = postsData.filter(post => post.authorId === userId);
+            if (userPosts.length === 0) {
+                publicProfilePostsContainer.innerHTML = '<p class="not-found-message" style="display:block;">Pengguna ini belum membuat postingan.</p>';
+            } else {
+                userPosts.forEach(post => {
+                    const postCard = createPostCard(post);
+                    publicProfilePostsContainer.appendChild(postCard);
+                });
+            }
+            
+            showPage('public-profile-page');
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        }
+
+        searchInput.addEventListener('input', (event) => {
+            const query = event.target.value.toLowerCase().trim();
+            userSearchResults.innerHTML = '';
+            
+            const allPosts = document.querySelectorAll('.post-card');
+            let hasPostResults = false;
+            let hasUserResults = false;
+
+            if (query.length > 0) {
+                userDatabase.forEach(user => {
+                    const userName = (user.customName || `id #${user.id.split('-')[1]}`).toLowerCase();
+                    if (userName.includes(query)) {
+                        const userCard = createProfileCard(user);
+                        userSearchResults.appendChild(userCard);
+                        hasUserResults = true;
+                    }
+                });
+
+                allPosts.forEach(post => {
+                    const postText = post.dataset.title.toLowerCase() + ' ' + post.dataset.content.toLowerCase();
+                    const postAuthor = post.dataset.authorName.toLowerCase();
+                    if (postText.includes(query) || postAuthor.includes(query)) {
+                        post.style.display = 'block';
+                        hasPostResults = true;
+                    } else {
+                        post.style.display = 'none';
+                    }
+                });
+            } else {
+                allPosts.forEach(post => post.style.display = 'block');
+            }
+            
+            if (!hasPostResults && !hasUserResults && query.length > 0) {
+                noResultsMessage.style.display = 'block';
+            } else {
+                noResultsMessage.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
